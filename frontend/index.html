@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Job Pilot</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f1117;--surface:#1a1d27;--surface2:#23263a;--border:#2e3149;
+  --accent:#6c63ff;--accent2:#4ecdc4;--text:#e8e8f0;--muted:#8b8ea8;
+  --green:#22c55e;--amber:#f59e0b;--red:#ef4444;--blue:#3b82f6;
+  --radius:10px;--font:'Inter',system-ui,sans-serif;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh}
+.layout{display:flex;height:100vh;overflow:hidden}
+.sidebar{width:220px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+.main{flex:1;overflow-y:auto;display:flex;flex-direction:column}
+.sidebar-logo{padding:24px 20px 16px;font-size:18px;font-weight:700;color:var(--accent);letter-spacing:-0.5px}
+.sidebar-logo span{color:var(--accent2)}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 20px;cursor:pointer;color:var(--muted);font-size:14px;border-left:3px solid transparent;transition:all .15s}
+.nav-item:hover{color:var(--text);background:var(--surface2)}
+.nav-item.active{color:var(--accent);border-left-color:var(--accent);background:rgba(108,99,255,.08)}
+.nav-icon{font-size:16px;width:20px;text-align:center}
+.sidebar-bottom{margin-top:auto;padding:16px;border-top:1px solid var(--border)}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 28px;display:flex;align-items:center;gap:16px}
+.topbar h1{font-size:16px;font-weight:600;flex:1}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;border:none;cursor:pointer;font-size:13px;font-weight:500;transition:opacity .15s;text-decoration:none}
+.btn:hover{opacity:.85}.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border)}
+.btn-success{background:var(--green);color:#fff}
+.btn-apply{background:linear-gradient(135deg,#6c63ff,#4ecdc4);color:#fff;font-weight:600;padding:9px 20px}
+.btn-sm{padding:5px 10px;font-size:12px}
+.content{padding:24px 28px;flex:1}
+.page{display:none}.page.active{display:block}
+
+/* Stats */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:16px;margin-bottom:24px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px}
+.stat-value{font-size:28px;font-weight:700;color:var(--accent)}
+.stat-label{font-size:12px;color:var(--muted);margin-top:4px}
+
+/* Filters */
+.filters{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:18px;align-items:center}
+.filters input,.filters select{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-size:13px;outline:none}
+.filters input:focus,.filters select:focus{border-color:var(--accent)}
+.filters input{min-width:200px}
+
+/* Job cards */
+.job-list{display:flex;flex-direction:column;gap:12px}
+.job-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;cursor:pointer;transition:border-color .15s;position:relative}
+.job-card:hover{border-color:var(--accent)}
+.job-card.selected{border-color:var(--accent);background:rgba(108,99,255,.06)}
+.job-card-top{display:flex;gap:16px;align-items:flex-start}
+.job-info{flex:1;min-width:0}
+.job-title{font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.job-company{font-size:13px;color:var(--muted);margin-top:3px}
+.job-meta{font-size:12px;color:var(--muted);margin-top:5px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.job-right{display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0}
+
+/* ATS ring */
+.ats-ring{width:56px;height:56px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:700;border:3px solid}
+.ats-ring .ats-num{font-size:15px;line-height:1}
+.ats-ring .ats-label{font-size:9px;opacity:.7;text-transform:uppercase;letter-spacing:.05em}
+
+/* Gap pills row */
+.gap-row{margin-top:10px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.gap-pill{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:500}
+.gap-critical{background:rgba(239,68,68,.15);color:#fca5a5;border:1px solid rgba(239,68,68,.25)}
+.gap-important{background:rgba(245,158,11,.15);color:#fcd34d;border:1px solid rgba(245,158,11,.25)}
+.gap-nice{background:rgba(139,142,168,.12);color:var(--muted);border:1px solid var(--border)}
+.gap-days{font-size:10px;opacity:.75}
+.learn-total{font-size:11px;color:var(--muted);margin-left:4px}
+
+/* Tags */
+.tag{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500}
+.tag-new{background:rgba(108,99,255,.2);color:#a89cff}
+.tag-matched{background:rgba(78,205,196,.15);color:var(--accent2)}
+.tag-applied{background:rgba(34,197,94,.15);color:var(--green)}
+.tag-rejected{background:rgba(239,68,68,.15);color:var(--red)}
+.tag-saved{background:rgba(245,158,11,.15);color:var(--amber)}
+.badge-posted{background:rgba(59,130,246,.15);color:#93c5fd;border:1px solid rgba(59,130,246,.2);padding:2px 7px;border-radius:20px;font-size:11px}
+
+/* Detail panel */
+.detail-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-top:16px}
+.detail-panel h2{font-size:18px;font-weight:600;margin-bottom:6px}
+.detail-meta{font-size:13px;color:var(--muted);margin-bottom:16px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.detail-section{margin-top:18px}
+.detail-section h3{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:10px}
+.skills-list{display:flex;flex-wrap:wrap;gap:6px}
+.skill-chip{background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:12px;color:var(--text)}
+.skill-chip.matched{background:rgba(78,205,196,.15);border-color:rgba(78,205,196,.3);color:var(--accent2)}
+.description{font-size:13px;line-height:1.7;color:var(--muted);white-space:pre-wrap;max-height:280px;overflow-y:auto;background:var(--surface2);border-radius:8px;padding:12px}
+.action-row{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;align-items:center}
+
+/* Gap analysis table */
+.gap-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}
+.gap-table th{text-align:left;padding:6px 10px;color:var(--muted);font-weight:500;border-bottom:1px solid var(--border)}
+.gap-table td{padding:7px 10px;border-bottom:1px solid rgba(46,49,73,.5);vertical-align:middle}
+.gap-table tr:last-child td{border-bottom:none}
+.imp-critical{color:#fca5a5;font-weight:600}
+.imp-important{color:#fcd34d}
+.imp-nice{color:var(--muted)}
+.days-bar-wrap{display:flex;align-items:center;gap:6px}
+.days-bar{height:6px;border-radius:3px;background:var(--accent);min-width:4px}
+.days-num{color:var(--text);white-space:nowrap}
+
+/* Run panel */
+.run-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;max-width:520px}
+.run-panel h2{margin-bottom:16px;font-size:16px}
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;font-weight:500}
+.form-group input,.form-group select{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:14px;outline:none}
+.form-group input:focus{border-color:var(--accent)}
+.auto-badge{display:inline-block;background:rgba(78,205,196,.15);color:var(--accent2);font-size:11px;padding:2px 8px;border-radius:20px;margin-left:8px}
+.log-box{background:#0a0c14;border:1px solid var(--border);border-radius:8px;padding:14px;font-family:monospace;font-size:12px;color:#7fff7f;height:180px;overflow-y:auto;margin-top:16px;white-space:pre-wrap}
+
+/* Upload */
+.upload-zone{border:2px dashed var(--border);border-radius:var(--radius);padding:40px;text-align:center;cursor:pointer;transition:border-color .15s;margin-bottom:16px}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--accent)}
+.upload-zone p{color:var(--muted);font-size:14px;margin-top:8px}
+.profile-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+.profile-card h3{font-size:16px;font-weight:600;margin-bottom:12px}
+.auto-query-box{background:rgba(108,99,255,.1);border:1px solid rgba(108,99,255,.3);border-radius:8px;padding:12px 16px;margin-top:12px;font-size:13px}
+.auto-query-box strong{color:var(--accent)}
+
+/* Pagination */
+.pagination{display:flex;gap:8px;justify-content:center;margin-top:20px;align-items:center}
+.pagination button{background:var(--surface);border:1px solid var(--border);color:var(--text);padding:6px 14px;border-radius:6px;cursor:pointer;font-size:13px}
+.pagination button:hover{border-color:var(--accent)}
+.pagination button.active{background:var(--accent);border-color:var(--accent)}
+.pagination span{color:var(--muted);font-size:13px}
+
+.empty{text-align:center;padding:60px 20px;color:var(--muted);font-size:14px}
+.loading{text-align:center;padding:40px;color:var(--muted)}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 18px;font-size:13px;z-index:999;animation:fadeIn .2s}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+.ats-great{border-color:var(--green);color:var(--green)}
+.ats-good{border-color:var(--accent2);color:var(--accent2)}
+.ats-mid{border-color:var(--amber);color:var(--amber)}
+.ats-low{border-color:var(--red);color:var(--red)}
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo">Job<span>Pilot</span></div>
+    <nav>
+      <div class="nav-item active" data-page="dashboard"><span class="nav-icon">📊</span> Dashboard</div>
+      <div class="nav-item" data-page="jobs"><span class="nav-icon">💼</span> Jobs</div>
+      <div class="nav-item" data-page="run"><span class="nav-icon">▶</span> Run Pipeline</div>
+      <div class="nav-item" data-page="profile"><span class="nav-icon">👤</span> Profile</div>
+    </nav>
+    <div class="sidebar-bottom"><div style="font-size:11px;color:var(--muted)">Job Pilot v2.0</div></div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <h1 id="page-title">Dashboard</h1>
+      <button class="btn btn-secondary btn-sm" onclick="refreshCurrent()">↺ Refresh</button>
+    </div>
+    <div class="content">
+
+      <!-- Dashboard -->
+      <div class="page active" id="page-dashboard">
+        <div class="stats-grid" id="stats-grid"><div class="loading">Loading...</div></div>
+        <div id="top-matches"></div>
+      </div>
+
+      <!-- Jobs -->
+      <div class="page" id="page-jobs">
+        <div class="filters">
+          <input type="text" id="search-input" placeholder="Search title or company..." oninput="debounceSearch()"/>
+          <select id="status-filter" onchange="loadJobs(1)">
+            <option value="">All statuses</option>
+            <option value="new">New</option>
+            <option value="matched">Matched</option>
+            <option value="applied">Applied</option>
+            <option value="rejected">Rejected</option>
+            <option value="saved">Saved</option>
+          </select>
+          <select id="sort-filter" onchange="loadJobs(1)">
+            <option value="ats_score">Sort: ATS Score</option>
+            <option value="posted_at">Sort: Posted Date</option>
+            <option value="scraped_at">Sort: Scraped</option>
+            <option value="company">Sort: Company</option>
+          </select>
+          <input type="number" id="min-ats" placeholder="Min ATS (0-100)" min="0" max="100" style="width:160px" oninput="debounceSearch()"/>
+        </div>
+        <div id="job-list" class="job-list"><div class="loading">Loading jobs...</div></div>
+        <div class="pagination" id="pagination"></div>
+        <div id="job-detail"></div>
+      </div>
+
+      <!-- Run Pipeline -->
+      <div class="page" id="page-run">
+        <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start">
+          <div class="run-panel">
+            <h2>Scrape LinkedIn <span class="auto-badge">auto-query from resume</span></h2>
+            <div class="form-group">
+              <label>Job Query <span style="color:var(--muted);font-weight:400">(leave blank to use profile)</span></label>
+              <input type="text" id="scrape-query" placeholder="Auto-detected from resume..."/>
+            </div>
+            <div class="form-group">
+              <label>Location</label>
+              <input type="text" id="scrape-location" placeholder="Auto-detected from resume..."/>
+            </div>
+            <div class="form-group">
+              <label>Max Listings</label>
+              <input type="number" id="scrape-limit" value="25" min="5" max="100"/>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="btn btn-primary" onclick="runScrape()">▶ Scrape Latest Jobs</button>
+              <button class="btn btn-success" onclick="runFull()">⚡ Scrape + ATS Match</button>
+            </div>
+          </div>
+          <div class="run-panel">
+            <h2>ATS Match Jobs</h2>
+            <div class="form-group">
+              <label>Max Jobs to Score</label>
+              <input type="number" id="match-limit" value="50" min="1" max="200"/>
+            </div>
+            <div class="form-group">
+              <label>Specific Job ID (optional)</label>
+              <input type="number" id="match-job-id" placeholder="Leave blank for all new"/>
+            </div>
+            <button class="btn btn-primary" onclick="runMatch()">▶ Run ATS Matcher</button>
+          </div>
+        </div>
+        <div class="log-box" id="log-box">// Pipeline logs will appear here...\n</div>
+      </div>
+
+      <!-- Profile -->
+      <div class="page" id="page-profile">
+        <div class="upload-zone" id="upload-zone" onclick="document.getElementById('resume-file').click()">
+          <div style="font-size:32px">📄</div>
+          <p style="font-weight:600;margin-top:8px">Upload your resume to get started</p>
+          <p style="font-size:12px;margin-top:4px">Gemini extracts your skills + auto-generates LinkedIn search query</p>
+          <p style="font-size:12px;color:var(--accent2);margin-top:4px">.pdf or .txt supported</p>
+          <input type="file" id="resume-file" accept=".pdf,.txt" style="display:none" onchange="uploadResume(this)"/>
+        </div>
+        <div id="profile-display"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+const API = '';
+let currentPage = 'dashboard';
+let jobPage = 1;
+let searchTimer;
+
+// ── Nav ──────────────────────────────────────────────────────────────────────
+document.querySelectorAll('.nav-item').forEach(el => {
+  el.addEventListener('click', () => {
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    el.classList.add('active');
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('page-' + el.dataset.page).classList.add('active');
+    document.getElementById('page-title').textContent = el.textContent.trim();
+    currentPage = el.dataset.page;
+    loadPage(currentPage);
+  });
+});
+
+function loadPage(p) {
+  if (p === 'dashboard') loadStats();
+  if (p === 'jobs') loadJobs(1);
+  if (p === 'profile') loadProfile();
+}
+function refreshCurrent() { loadPage(currentPage); }
+
+// ── Stats ─────────────────────────────────────────────────────────────────────
+async function loadStats() {
+  const d = await api('/api/stats');
+  document.getElementById('stats-grid').innerHTML = [
+    ['Total Jobs', d.total_jobs],
+    ['New', d.new],
+    ['Matched', d.matched],
+    ['Applied', d.applied],
+    ['Top ATS', d.top_ats != null ? d.top_ats + '%' : '—'],
+    ['Avg ATS', d.avg_ats != null ? d.avg_ats + '%' : '—'],
+  ].map(([label, val]) => `
+    <div class="stat-card">
+      <div class="stat-value">${val ?? '—'}</div>
+      <div class="stat-label">${label}</div>
+    </div>`).join('');
+
+  const tm = document.getElementById('top-matches');
+  if (d.top_matches?.length) {
+    tm.innerHTML = `<h3 style="margin-bottom:12px;font-size:14px;color:var(--muted)">Top ATS matches</h3>
+      <div class="job-list">${d.top_matches.map(j => `
+        <div class="job-card" onclick="goToJob(${j.id})">
+          <div class="job-card-top">
+            <div class="job-info">
+              <div class="job-title">${esc(j.title)}</div>
+              <div class="job-company">${esc(j.company)} &mdash; ${esc(j.location || '')}</div>
+              <div class="job-meta">
+                ${j.posted_at ? `<span class="badge-posted">${esc(j.posted_at)}</span>` : ''}
+              </div>
+              ${j.critical_gaps?.length ? `
+              <div class="gap-row" style="margin-top:8px">
+                <span style="font-size:11px;color:var(--muted)">Critical gaps:</span>
+                ${j.critical_gaps.slice(0,3).map(g => `<span class="gap-pill gap-critical">${esc(g.skill)}</span>`).join('')}
+              </div>` : ''}
+            </div>
+            <div class="job-right">${atsRing(j.ats_score)}</div>
+          </div>
+        </div>`).join('')}</div>`;
+  }
+}
+
+// ── Jobs ──────────────────────────────────────────────────────────────────────
+function debounceSearch() {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => loadJobs(1), 400);
+}
+
+async function loadJobs(page = 1) {
+  jobPage = page;
+  const search  = document.getElementById('search-input').value;
+  const status  = document.getElementById('status-filter').value;
+  const sort    = document.getElementById('sort-filter').value;
+  const minAts  = document.getElementById('min-ats').value;
+  const params  = new URLSearchParams({ page, page_size: 20, sort_by: sort });
+  if (search)  params.set('search', search);
+  if (status)  params.set('status', status);
+  if (minAts)  params.set('min_ats', minAts);
+
+  const data = await api('/api/jobs?' + params);
+  const list = document.getElementById('job-list');
+
+  if (!data.jobs.length) {
+    list.innerHTML = '<div class="empty">No jobs found. Run the pipeline to scrape listings.</div>';
+    document.getElementById('pagination').innerHTML = '';
+    return;
+  }
+
+  list.innerHTML = data.jobs.map(j => {
+    const critGaps = j.critical_gaps || [];
+    const impGaps  = (j.gaps || []).filter(g => g.importance === 'important').slice(0, 2);
+    const totalDays = j.total_learn_days || 0;
+    return `
+    <div class="job-card" id="jc-${j.id}" onclick="showJobDetail(${j.id})">
+      <div class="job-card-top">
+        <div class="job-info">
+          <div class="job-title">${esc(j.title)}</div>
+          <div class="job-company">${esc(j.company || '—')}</div>
+          <div class="job-meta">
+            <span>📍 ${esc(j.location || '—')}</span>
+            ${j.posted_at ? `<span class="badge-posted">${esc(j.posted_at)}</span>` : ''}
+            ${j.job_type ? `<span>${esc(j.job_type)}</span>` : ''}
+            <span class="tag tag-${j.status}">${j.status}</span>
+          </div>
+          ${(critGaps.length || impGaps.length) ? `
+          <div class="gap-row">
+            ${critGaps.slice(0,3).map(g => `
+              <span class="gap-pill gap-critical" title="${g.learn_days} days to learn">
+                ${esc(g.skill)} <span class="gap-days">${g.learn_days}d</span>
+              </span>`).join('')}
+            ${impGaps.map(g => `
+              <span class="gap-pill gap-important" title="${g.learn_days} days to learn">
+                ${esc(g.skill)} <span class="gap-days">${g.learn_days}d</span>
+              </span>`).join('')}
+            ${totalDays > 0 ? `<span class="learn-total">~${totalDays} days total</span>` : ''}
+          </div>` : ''}
+          ${j.matched_skills?.length ? `
+          <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px">
+            ${j.matched_skills.slice(0,5).map(s => `<span class="skill-chip matched">${esc(s)}</span>`).join('')}
+          </div>` : ''}
+        </div>
+        <div class="job-right">
+          ${atsRing(j.ats_score)}
+          <a href="${esc(j.url)}" target="_blank" class="btn btn-apply btn-sm" onclick="event.stopPropagation()">Apply ↗</a>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Pagination
+  const totalPages = Math.ceil(data.total / data.page_size);
+  const pg = document.getElementById('pagination');
+  pg.innerHTML = '';
+  if (totalPages > 1) {
+    if (page > 1) pg.innerHTML += `<button onclick="loadJobs(${page-1})">‹</button>`;
+    for (let p = Math.max(1,page-2); p <= Math.min(totalPages,page+2); p++) {
+      pg.innerHTML += `<button class="${p===page?'active':''}" onclick="loadJobs(${p})">${p}</button>`;
+    }
+    if (page < totalPages) pg.innerHTML += `<button onclick="loadJobs(${page+1})">›</button>`;
+    pg.innerHTML += `<span>${data.total} jobs</span>`;
+  }
+}
+
+async function showJobDetail(id) {
+  document.querySelectorAll('.job-card').forEach(c => c.classList.remove('selected'));
+  const card = document.getElementById('jc-' + id);
+  if (card) card.classList.add('selected');
+
+  const job = await api(`/api/jobs/${id}`);
+  const gaps = Array.isArray(job.gaps) ? job.gaps : [];
+  const maxDays = Math.max(...gaps.map(g => g.learn_days || 0), 30);
+
+  document.getElementById('job-detail').innerHTML = `
+    <div class="detail-panel">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
+        <div style="flex:1">
+          <h2>${esc(job.title)}</h2>
+          <div class="detail-meta">
+            <span>${esc(job.company || '—')}</span>
+            <span>📍 ${esc(job.location || '—')}</span>
+            ${job.job_type ? `<span>${esc(job.job_type)}</span>` : ''}
+            ${job.posted_at ? `<span class="badge-posted">${esc(job.posted_at)}</span>` : ''}
+            <span class="tag tag-${job.status}">${job.status}</span>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:8px">
+          ${atsRing(job.ats_score, 64)}
+          <span style="font-size:11px;color:var(--muted)">ATS Score</span>
+        </div>
+      </div>
+
+      ${job.reasoning ? `
+      <div class="detail-section">
+        <h3>AI Assessment</h3>
+        <p style="font-size:13px;color:var(--muted);line-height:1.6">${esc(job.reasoning)}</p>
+      </div>` : ''}
+
+      ${job.matched_skills?.length ? `
+      <div class="detail-section">
+        <h3>Matched Skills (${job.matched_skills.length})</h3>
+        <div class="skills-list">${job.matched_skills.map(s => `<span class="skill-chip matched">${esc(s)}</span>`).join('')}</div>
+      </div>` : ''}
+
+      ${gaps.length ? `
+      <div class="detail-section">
+        <h3>Skill Gaps &amp; Learning Plan</h3>
+        <table class="gap-table">
+          <thead><tr>
+            <th>Skill</th><th>Importance</th><th>Days to learn</th><th>Resource</th>
+          </tr></thead>
+          <tbody>
+            ${gaps.map(g => {
+              const cls = g.importance === 'critical' ? 'imp-critical' : g.importance === 'important' ? 'imp-important' : 'imp-nice';
+              const barWidth = Math.max(4, Math.round((g.learn_days || 1) / maxDays * 120));
+              return `<tr>
+                <td><strong>${esc(g.skill)}</strong></td>
+                <td class="${cls}">${esc(g.importance)}</td>
+                <td>
+                  <div class="days-bar-wrap">
+                    <div class="days-bar" style="width:${barWidth}px"></div>
+                    <span class="days-num">${g.learn_days} days</span>
+                  </div>
+                </td>
+                <td style="color:var(--muted);font-size:12px">${esc(g.resource || '—')}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+        <div style="margin-top:10px;font-size:12px;color:var(--muted)">
+          Total upskilling time: <strong style="color:var(--text)">${gaps.reduce((s,g)=>s+(g.learn_days||0),0)} days</strong>
+        </div>
+      </div>` : ''}
+
+      ${job.raw_text ? `
+      <div class="detail-section">
+        <h3>Job Description</h3>
+        <div class="description">${esc((job.raw_text||'').slice(0,3000))}${(job.raw_text||'').length>3000?'...':''}</div>
+      </div>` : ''}
+
+      <div class="action-row">
+        <a href="${esc(job.url)}" target="_blank" class="btn btn-apply">Apply on LinkedIn ↗</a>
+        <button class="btn btn-success btn-sm" onclick="updateStatus(${job.id},'applied')">Mark Applied</button>
+        <button class="btn btn-sm" style="background:var(--amber);color:#000" onclick="updateStatus(${job.id},'saved')">Save</button>
+        <button class="btn btn-sm" style="background:var(--red);color:#fff" onclick="updateStatus(${job.id},'rejected')">Reject</button>
+      </div>
+    </div>`;
+
+  document.getElementById('job-detail').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+async function updateStatus(id, status) {
+  await api(`/api/jobs/${id}/status`, {method:'POST', body:JSON.stringify({status})});
+  toast(`Marked as ${status}`);
+  loadJobs(jobPage);
+  showJobDetail(id);
+}
+
+// ── Run Pipeline ─────────────────────────────────────────────────────────────
+function log(msg) {
+  const box = document.getElementById('log-box');
+  box.textContent += `[${new Date().toLocaleTimeString()}] ${msg}\n`;
+  box.scrollTop = box.scrollHeight;
+}
+
+async function runScrape() {
+  const query    = document.getElementById('scrape-query').value || null;
+  const location = document.getElementById('scrape-location').value || null;
+  const limit    = parseInt(document.getElementById('scrape-limit').value);
+  const fromProfile = !query;
+  log(`Scraping${fromProfile ? ' (auto-query from profile)' : ': "'+query+'"'}...`);
+  const d = await api('/api/run/scrape', {method:'POST', body:JSON.stringify({query, location, limit, from_profile: fromProfile})});
+  log(d.message);
+  toast('Scrape started');
+}
+
+async function runMatch() {
+  const limit = parseInt(document.getElementById('match-limit').value);
+  const jobId = document.getElementById('match-job-id').value;
+  const body  = {limit};
+  if (jobId) body.job_id = parseInt(jobId);
+  log(`Starting ATS matcher (limit ${limit})...`);
+  const d = await api('/api/run/match', {method:'POST', body:JSON.stringify(body)});
+  log(d.message);
+  toast('ATS matching started');
+}
+
+async function runFull() {
+  const query    = document.getElementById('scrape-query').value || null;
+  const location = document.getElementById('scrape-location').value || null;
+  const limit    = parseInt(document.getElementById('scrape-limit').value);
+  log(`Starting full pipeline (scrape + ATS match)...`);
+  const d = await api('/api/run/full', {method:'POST', body:JSON.stringify({query, location, limit, from_profile: !query})});
+  log(d.message);
+  toast('Full pipeline started');
+}
+
+// ── Profile ───────────────────────────────────────────────────────────────────
+async function loadProfile() {
+  const el = document.getElementById('profile-display');
+  try {
+    const p = await api('/api/profile');
+    const raw = typeof p.raw_resume === 'object' ? p.raw_resume : {};
+    const skills = Array.isArray(p.skills) ? p.skills : JSON.parse(p.skills || '[]');
+    const exp    = typeof p.experience === 'object' ? p.experience : JSON.parse(p.experience || '{}');
+    const query  = raw.search_query || p.role_target || '';
+    const loc    = raw.location_pref || p.location_pref || '';
+    el.innerHTML = `
+      <div class="profile-card">
+        <h3>${esc(raw.name || p.role_target || 'Your Profile')}</h3>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:12px;display:flex;flex-wrap:wrap;gap:10px">
+          ${p.role_target ? `<span>${esc(p.role_target)}</span>` : ''}
+          ${loc ? `<span>📍 ${esc(loc)}</span>` : ''}
+          ${exp.years ? `<span>${exp.years} yrs exp</span>` : ''}
+        </div>
+        ${exp.summary ? `<p style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:16px">${esc(exp.summary)}</p>` : ''}
+        <div style="margin-bottom:16px">
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px">Skills</div>
+          <div class="skills-list">${skills.map(s => `<span class="skill-chip">${esc(s)}</span>`).join('')}</div>
+        </div>
+        ${query ? `
+        <div class="auto-query-box">
+          <strong>Auto-search query:</strong> "${esc(query)}" in "${esc(loc)}"
+          <div style="font-size:11px;color:var(--muted);margin-top:4px">This will be used automatically when you run the pipeline</div>
+        </div>` : ''}
+      </div>`;
+  } catch {
+    el.innerHTML = '<p style="color:var(--muted);font-size:14px">No profile yet — upload your resume above.</p>';
+  }
+}
+
+async function uploadResume(input) {
+  const file = input.files[0];
+  if (!file) return;
+  toast('Extracting profile from resume...');
+  const form = new FormData();
+  form.append('file', file);
+  try {
+    const res  = await fetch(API + '/api/profile/upload', {method:'POST', body:form});
+    const data = await res.json();
+    if (data.ok) {
+      toast(`Profile ready! Query: "${data.auto_query}" in "${data.location}"`);
+      loadProfile();
+      // Pre-fill run panel
+      document.getElementById('scrape-query').placeholder = data.auto_query || '';
+      document.getElementById('scrape-location').placeholder = data.location || '';
+    } else {
+      toast('Upload failed: ' + (data.detail || 'unknown'));
+    }
+  } catch(e) { toast('Error: ' + e.message); }
+}
+
+const zone = document.getElementById('upload-zone');
+zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag'); });
+zone.addEventListener('dragleave', () => zone.classList.remove('drag'));
+zone.addEventListener('drop', e => {
+  e.preventDefault(); zone.classList.remove('drag');
+  const f = e.dataTransfer.files[0];
+  if (f) {
+    const dt = new DataTransfer(); dt.items.add(f);
+    document.getElementById('resume-file').files = dt.files;
+    uploadResume(document.getElementById('resume-file'));
+  }
+});
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+async function api(path, opts = {}) {
+  opts.headers = {'Content-Type':'application/json', ...(opts.headers||{})};
+  const res = await fetch(API + path, opts);
+  if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.detail || res.statusText); }
+  return res.json();
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function atsRing(score, size=56) {
+  if (score == null) return '';
+  const cls = score >= 85 ? 'ats-great' : score >= 70 ? 'ats-good' : score >= 50 ? 'ats-mid' : 'ats-low';
+  return `<div class="ats-ring ${cls}" style="width:${size}px;height:${size}px">
+    <span class="ats-num">${score}%</span>
+    <span class="ats-label">ATS</span>
+  </div>`;
+}
+
+function toast(msg, dur=3500) {
+  const t = document.createElement('div');
+  t.className='toast'; t.textContent=msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), dur);
+}
+
+function goToJob(id) {
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelector('[data-page=jobs]').classList.add('active');
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-jobs').classList.add('active');
+  document.getElementById('page-title').textContent = 'Jobs';
+  currentPage = 'jobs';
+  loadJobs(1).then(() => id && showJobDetail(id));
+}
+
+loadStats();
+</script>
+</body>
+</html>
