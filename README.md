@@ -13,8 +13,8 @@ job_pilot/
 │   └── jobs.db              ← SQLite (auto-created)
 ├── worker/
 │   ├── job_navigator.py     ← Playwright LinkedIn scraper
-│   ├── matcher.py           ← AI job scoring (Claude)
-│   └── agent.py             ← Resume → structured profile (Claude)
+│   ├── matcher.py           ← AI job scoring 
+│   └── agent.py             ← Resume → structured profile 
 ├── frontend/
 │   └── index.html           ← SPA dashboard
 ├── utils/
